@@ -1,70 +1,72 @@
 # 🛡️ S3 Security Dashboard
 
 ## Overview
-The **S3 Security Dashboard** is a cloud-native security monitoring and compliance tool designed to analyze, detect, and mitigate threats within AWS S3 environments. It provides an enterprise-grade solution that goes beyond static misconfiguration scanning by integrating **real-time threat detection** using AWS CloudTrail and EventBridge.  
-This project demonstrates expertise in **cloud security engineering, event-driven automation, and AWS-native service orchestration**—key skills in modern cloud security roles.
+The **S3 Security Dashboard** is a Python-based cloud security tool that analyzes and monitors AWS S3 configurations, integrates with CloudTrail for real-time threat detection, and provides a simple FastAPI-powered interface for visualizing audit results and alerts.  
+It highlights hands-on expertise in **AWS security monitoring**, **event-driven architecture**, and **cloud threat detection automation** — representing the core skills of a Cloud Security Engineer.
 
 ---
 
 ## 🎯 Objectives
-- Continuously monitor AWS S3 buckets for misconfigurations and risks.
-- Detect and alert on real-time suspicious API activity via CloudTrail integration.
-- Provide compliance posture visualization and detailed reporting.
-- Enable automation for detection, response, and compliance workflows.
+- Continuously audit AWS S3 buckets for misconfigurations and public access issues.  
+- Detect real-time suspicious API activity using AWS CloudTrail, EventBridge, and Lambda.  
+- Visualize audit results and threat alerts through a clean, lightweight dashboard.  
+- Automate detection and alerting pipelines with minimal manual intervention.
 
 ---
 
 ## 🧩 Core Features
 
 ### 1. S3 Bucket Security Scanning
-- Automatically enumerates all S3 buckets.
-- Detects:
-  - Publicly accessible buckets.
-  - Misconfigured ACLs and bucket policies.
-  - Overly permissive IAM roles.
-- Classifies issues by severity: **Low, Medium, High, Critical**.
+- Scans all AWS S3 buckets within an account.  
+- Identifies:
+  - Publicly accessible buckets.  
+  - Insecure ACLs or overly permissive bucket policies.  
+  - Cross-account access permissions.  
+- Assigns risk severity levels to each issue: **Low, Medium, High, Critical.**
 
 ### 2. Compliance & Policy Validation
-- Maps findings to **CIS AWS Foundations** and best practices.
-- Generates audit-ready compliance reports.
-- Monitors historical improvement trends and compliance drift.
+- Maps findings to **AWS CIS Foundations Benchmark** and best security practices.  
+- Generates simple compliance reports showing which buckets fail or pass key checks.  
+- Enables organizations to track misconfigurations and maintain security hygiene.
 
-### 3. CloudTrail Threat Detection (Enterprise Feature)
-- Integrates **AWS CloudTrail** and **EventBridge** for continuous monitoring.
-- Detects suspicious actions such as:
-  - Unauthorized `PutBucketPolicy` or `DeleteBucket` calls.
-  - Bulk object deletions (`DeleteObject` bursts).
-  - High-volume downloads or unusual access patterns.
-- Uses **AWS Lambda** to process and evaluate event data.
-- Sends immediate alerts via **SNS**, **Slack**, or **PagerDuty**.
+### 3. Real-Time CloudTrail Threat Detection
+- Integrates **AWS CloudTrail** and **EventBridge** for continuous monitoring of S3 events.  
+- Detects and flags abnormal actions such as:
+  - Unauthorized `PutBucketPolicy` or `DeleteBucket` calls.  
+  - Mass object deletions (`DeleteObject` in short bursts).  
+  - Large-scale downloads from unfamiliar IPs or regions.  
+- **AWS Lambda** processes these events and triggers alerts.  
+- Alerts are pushed instantly through **AWS SNS**, **Slack**, or **Email**.
+
+**Architecture Flow:**
+```
+CloudTrail → EventBridge → Lambda → SNS/Slack → Dashboard
+```
 
 ### 4. Alerting & Notifications
-- Delivers real-time alerts when critical events are detected.
-- Supports multiple channels: SNS, Slack, Email, PagerDuty.
-- Alert payload includes:
-  - User identity (ARN)
-  - IP and region
-  - Event type
-  - Resource affected
-  - Severity and timestamp
+- Sends immediate alerts when suspicious activity is detected.  
+- Alerts contain:
+  - Event name and type.  
+  - User identity (ARN).  
+  - IP address and region.  
+  - Bucket name and timestamp.  
+- Supports multiple channels for flexibility (Slack, SNS, or direct email).
 
-### 5. Security Posture Visualization
-- Centralized dashboard displays:
-  - Total S3 buckets analyzed.
-  - Secure vs. vulnerable resources.
-  - Detected threats by severity.
-  - Compliance score and trend charts.
-- Optional **risk scoring engine** for contextual prioritization.
+### 5. Dashboard & Visualization
+- Built using **FastAPI** and **Jinja2 templates**.  
+- Displays:
+  - Bucket scan results and compliance summary.  
+  - Threat alerts with timestamps and metadata.  
+  - Summary of overall security posture.  
+- Lightweight, fast, and easily deployable on any cloud instance.
 
-### 6. Optional Advanced Features
-- **Automated Remediation (IaC):**
-  - Generates Terraform/CloudFormation templates to fix misconfigurations.
-  - Opens automated pull requests for review.
-  - Integrates with AWS Systems Manager to apply fixes.
-- **Sensitive Data Discovery (DLP):**
-  - Uses **AWS Macie** or custom pattern matching to detect sensitive data.
-  - Identifies PII, PHI, and API keys.
-  - Visualizes sensitive data exposure and risk heatmaps.
+### 6. Optional Advanced Enhancements
+- **Auto-Remediation Hooks:**
+  - Generate Terraform or CloudFormation templates for misconfigurations.  
+  - Optionally integrate with AWS Systems Manager for automatic fixes.  
+- **Sensitive Data Discovery:**
+  - Uses **AWS Macie** or regex-based detection for PII, API keys, or credentials.  
+  - Highlights exposed or sensitive data in public buckets.
 
 ---
 
@@ -72,22 +74,21 @@ This project demonstrates expertise in **cloud security engineering, event-drive
 
 | Layer | Technology | Purpose |
 |-------|-------------|----------|
-| **Frontend** | React / Next.js | Interactive dashboard UI |
-| **Backend API** | FastAPI (Python) | RESTful backend and data logic |
-| **AWS SDK** | Boto3 | AWS service integration |
-| **Database** | PostgreSQL / DynamoDB | Store scan history and alerts |
-| **Event Processing** | Lambda + EventBridge | Real-time detection logic |
-| **Monitoring** | CloudTrail | Logs all AWS API calls |
-| **Alerting** | SNS / Slack Webhooks | Pushes notifications instantly |
+| **Frontend** | FastAPI + Jinja2 Templates | Simple and fast web UI for results visualization |
+| **Backend** | Python (FastAPI) | Core logic for scanning, detection, and AWS integration |
+| **AWS SDK** | Boto3 | Communication with AWS S3, CloudTrail, SNS, EventBridge, and Lambda |
+| **Event Processing** | AWS Lambda + EventBridge | Handles live event-driven threat detection |
+| **Monitoring** | AWS CloudTrail | Captures and forwards all S3 API activity for analysis |
+| **Alerting** | AWS SNS / Slack Webhooks | Sends notifications for detected security threats |
 
 ---
 
 ## 🧰 Prerequisites
-- AWS account with:
-  - S3, CloudTrail, Lambda, EventBridge, SNS access.
-- IAM user/role with administrative privileges for the above services.
-- Python 3.9+ and Node.js 18+ installed.
-- AWS CLI configured with valid credentials.
+- AWS account with permissions for:
+  - S3, CloudTrail, Lambda, EventBridge, SNS.  
+- AWS CLI configured locally with valid credentials.  
+- Python 3.9+ installed on your system.  
+- Optional: Slack webhook URL for alert notifications.
 
 ---
 
@@ -95,13 +96,13 @@ This project demonstrates expertise in **cloud security engineering, event-drive
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/<your-username>/s3-security-dashboard.git
-cd s3-security-dashboard
+git clone https://github.com/SanayKrishna/CloudScanner.git
+cd CloudScanner
 ```
 
-### 2. Environment Configuration
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory:
 ```bash
-# Create an .env file with the following variables
 AWS_ACCESS_KEY_ID=<your-access-key>
 AWS_SECRET_ACCESS_KEY=<your-secret-key>
 AWS_DEFAULT_REGION=<your-region>
@@ -110,53 +111,40 @@ SLACK_WEBHOOK_URL=<your-slack-webhook-url>
 
 ### 3. Install Dependencies
 ```bash
-# Backend Dependencies
 pip install -r requirements.txt
-
-# Frontend Dependencies
-npm install
 ```
 
-### 4. Deploy AWS Resources
-- Enable **CloudTrail** logging for all S3 API calls.
-- Create **EventBridge rules** for suspicious API event filtering.
-- Deploy **Lambda functions** to handle incoming CloudTrail events.
-- Configure **SNS** or **Slack** alert destinations.
+### 4. Deploy AWS Components
+- Enable **CloudTrail** to log all S3 events.  
+- Create **EventBridge rules** to capture important API calls.  
+- Deploy **Lambda functions** for event analysis.  
+- Configure **SNS or Slack** for alert delivery.
 
-### 5. Launch Application
+### 5. Run the Dashboard
 ```bash
-# Start Backend
 uvicorn main:app --reload
-
-# Start Frontend
-npm run dev
 ```
-Access dashboard locally at **http://localhost:3000**
+Access it locally at **http://localhost:8000**
 
 ---
 
-## 🧾 Example Detection Flow
-- **CloudTrail** logs every API call.
-- **EventBridge** filters for events such as:
-  - `DeleteBucket`
-  - `PutBucketPolicy`
-  - `DeleteObject`
-- **Lambda** processes these logs and evaluates:
-  - IP origin
-  - User role legitimacy
-  - Access frequency
-- If suspicious, **SNS/Slack** alert is triggered instantly.
-
-**Architecture Flow:**
-```
-CloudTrail → EventBridge → Lambda → SNS/Slack → Dashboard
+## 🧾 Example Threat Event
+Sample CloudTrail event triggering an alert:
+```json
+{
+  "eventSource": "s3.amazonaws.com",
+  "eventName": "DeleteBucket",
+  "userIdentity": { "arn": "arn:aws:iam::123456789012:user/unknown-user" },
+  "sourceIPAddress": "45.12.67.89",
+  "awsRegion": "us-east-1",
+  "eventTime": "2025-11-06T03:41:22Z"
+}
 ```
 
-**Example Alert Message:**
+Alert Example:
 ```
-🚨 [CRITICAL] Suspicious S3 Activity Detected!
-Event: DeleteBucket
-User: arn:aws:iam::123456789012:user/unknown-user
+🚨 [CRITICAL] Suspicious DeleteBucket Activity Detected
+User: unknown-user
 IP: 45.12.67.89 | Region: us-east-1
 Bucket: confidential-data
 Time: 2025-11-06T03:41:22Z
@@ -165,21 +153,20 @@ Time: 2025-11-06T03:41:22Z
 ---
 
 ## 📊 Dashboard Metrics
-- Total Buckets Scanned
-- Vulnerable vs. Secure Buckets
-- Threat Events by Severity
-- Recent Alerts Timeline
-- Compliance Score (in %)
-- Risk Trend Over Time
+- Total Buckets Scanned  
+- Public vs Private Buckets  
+- Threat Events by Severity  
+- Recent Alerts  
+- Compliance Summary  
 
 ---
 
 ## 🧩 Future Enhancements
-- Extend support to **Azure Blob** and **GCP Cloud Storage**.
-- Integrate **AWS GuardDuty** for enriched threat intelligence.
-- Implement **AI-based anomaly detection** using ML.
-- Add **Role-Based Access Control (RBAC)** for multi-user dashboards.
-- Enable **automated incident response playbooks**.
+- Add **multi-cloud support** for Azure Blob & GCP Cloud Storage.  
+- Integrate **AWS GuardDuty** for threat correlation.  
+- Enable **AI-driven anomaly detection** for behavioral analysis.  
+- Add **RBAC (Role-Based Access Control)** for dashboard access.  
+- Implement **automated remediation workflows** via AWS Lambda.
 
 ---
 
@@ -210,7 +197,7 @@ Time: 2025-11-06T03:41:22Z
                                │
                      ┌─────────▼─────────┐
                      │ S3 Security        │
-                     │ Dashboard UI       │
+                     │ Dashboard (FastAPI)│
                      │ (Visualizes        │
                      │ Findings & Threats)│
                      └────────────────────┘
@@ -219,10 +206,11 @@ Time: 2025-11-06T03:41:22Z
 ---
 
 ## 🏆 Key Highlights
-- Built **real-time cloud threat detection** using AWS-native components.
-- Designed **event-driven Lambda pipelines** for live monitoring.
-- Implemented **risk-based prioritization** and compliance mapping.
-- Achieved **end-to-end cloud security observability** in a single dashboard.
+- 100% **AWS-native**, no external dependencies or databases.  
+- Implements **event-driven detection** and **automated alerting** pipelines.  
+- Simple yet powerful **FastAPI-based dashboard**.  
+- Demonstrates **real-world cloud security engineering** and **SOC-style detection logic**.  
+- Focused on **visibility, automation, and hands-on AWS defense.**
 
 ---
 
@@ -240,4 +228,4 @@ See [LICENSE](LICENSE) for full details.
 
 ---
 
-⭐ **If this project helped you, consider giving it a star and sharing it with other cloud security enthusiasts!**
+⭐ **If you found this project useful or inspiring, drop a star and share it with fellow cloud security enthusiasts!**
