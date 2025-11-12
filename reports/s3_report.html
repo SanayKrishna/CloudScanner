@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Security Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            color: #2d3748;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #1a202c;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-card.critical {
+            border-left-color: #e53e3e;
+        }
+
+        .stat-card.warning {
+            border-left-color: #ed8936;
+        }
+
+        .stat-card.info {
+            border-left-color: #4299e1;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-card.critical .stat-value {
+            color: #e53e3e;
+        }
+
+        .stat-card.warning .stat-value {
+            color: #ed8936;
+        }
+
+        .stat-card.info .stat-value {
+            color: #4299e1;
+        }
+
+        .stat-description {
+            font-size: 0.9em;
+            color: #a0aec0;
+        }
+
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            animation: fadeInUp 0.6s ease 0.4s both;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.3em;
+        }
+
+        .section-icon.critical {
+            background: #fed7d7;
+            color: #e53e3e;
+        }
+
+        .section-icon.warning {
+            background: #feebc8;
+            color: #ed8936;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .bucket-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .bucket-item {
+            background: #f7fafc;
+            padding: 16px 20px;
+            border-radius: 10px;
+            border-left: 3px solid;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .bucket-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .bucket-item.critical {
+            border-left-color: #e53e3e;
+        }
+
+        .bucket-item.warning {
+            border-left-color: #ed8936;
+        }
+
+        .bucket-name {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95em;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .bucket-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bucket-badge.critical {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .bucket-badge.warning {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section {
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ S3 Security Dashboard</h1>
+            <p class="subtitle">Monitoring bucket configurations and security posture</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card critical">
+                <div class="stat-label">Critical Issues</div>
+                <div class="stat-value">2</div>
+                <div class="stat-description">Public buckets detected</div>
+            </div>
+
+            <div class="stat-card warning">
+                <div class="stat-label">Warnings</div>
+                <div class="stat-value">4</div>
+                <div class="stat-description">Versioning disabled</div>
+            </div>
+
+            <div class="stat-card info">
+                <div class="stat-label">Total Scanned</div>
+                <div class="stat-value">6</div>
+                <div class="stat-description">Buckets analyzed</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon critical">⚠️</div>
+                <h2 class="section-title">Public Buckets</h2>
+            </div>
+
+            
+            <div class="bucket-list">
+                
+                <div class="bucket-item critical">
+                    <span class="bucket-name">remochi</span>
+                    <span class="bucket-badge critical">Public</span>
+                </div>
+                
+                <div class="bucket-item critical">
+                    <span class="bucket-name">scanner-public-bucket</span>
+                    <span class="bucket-badge critical">Public</span>
+                </div>
+                
+            </div>
+            
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-icon warning">📦</div>
+                <h2 class="section-title">Versioning Disabled</h2>
+            </div>
+
+            
+            <div class="bucket-list">
+                
+                <div class="bucket-item warning">
+                    <span class="bucket-name">remochi</span>
+                    <span class="bucket-badge warning">No Version</span>
+                </div>
+                
+                <div class="bucket-item warning">
+                    <span class="bucket-name">scanner-private-unencrypted</span>
+                    <span class="bucket-badge warning">No Version</span>
+                </div>
+                
+                <div class="bucket-item warning">
+                    <span class="bucket-name">scanner-public-bucket</span>
+                    <span class="bucket-badge warning">No Version</span>
+                </div>
+                
+                <div class="bucket-item warning">
+                    <span class="bucket-name">scanner-versioning-disabled</span>
+                    <span class="bucket-badge warning">No Version</span>
+                </div>
+                
+            </div>
+            
+        </div>
+
+        <footer class="footer">
+            <p>Generated on 2025-10-25 22:50:02 • AWS S3 Security Audit</p>
+        </footer>
+    </div>
+</body>
+</html>

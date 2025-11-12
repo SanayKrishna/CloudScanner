@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Threat Detection Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            color: #2d3748;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Sticky Header */
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 30px 0;
+            margin: 0 -20px 50px -20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            animation: slideDown 0.6s ease;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #1a202c;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 0.95em;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: #e2e8f0;
+            color: #4a5568;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+        }
+
+        .nav-tab:hover {
+            background: #cbd5e0;
+        }
+
+        .nav-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Demo Mode Badge */
+        .demo-badge {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+        }
+
+        .demo-badge.hidden {
+            display: none;
+        }
+
+        .last-updated {
+            font-size: 0.85em;
+            color: #718096;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            font-size: 0.95em;
+        }
+
+        .refresh-btn:hover:not(.loading) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-btn.loading {
+            opacity: 0.8;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .refresh-icon {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            font-size: 1.1em;
+        }
+
+        .refresh-btn.loading .refresh-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Controls Section */
+        .controls {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .controls label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        select {
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-card.critical {
+            border-left-color: #e53e3e;
+        }
+
+        .stat-card.high {
+            border-left-color: #ed8936;
+        }
+
+        .stat-card.medium {
+            border-left-color: #ecc94b;
+        }
+
+        .stat-card.info {
+            border-left-color: #4299e1;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card.critical .stat-value {
+            color: #e53e3e;
+        }
+
+        .stat-card.high .stat-value {
+            color: #ed8936;
+        }
+
+        .stat-card.medium .stat-value {
+            color: #ecc94b;
+        }
+
+        .stat-card.info .stat-value {
+            color: #4299e1;
+        }
+
+        .stat-description {
+            font-size: 0.85em;
+            color: #a0aec0;
+        }
+
+        /* Findings Section */
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            animation: fadeInUp 0.6s ease 0.4s both;
+            transition: all 0.3s ease;
+        }
+
+        .section.hidden {
+            display: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 1.2em;
+        }
+
+        .section-icon.critical {
+            background: #fed7d7;
+            color: #e53e3e;
+        }
+
+        .section-icon.high {
+            background: #feebc8;
+            color: #ed8936;
+        }
+
+        .section-icon.medium {
+            background: #fefcbf;
+            color: #d69e2e;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        /* Finding Item - Expandable */
+        .finding-item {
+            background: #f7fafc;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid;
+            transition: all 0.2s ease;
+            animation: slideInLeft 0.3s ease;
+            cursor: pointer;
+        }
+
+        .finding-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .finding-item.expanded {
+            background: #e6fffa;
+        }
+
+        .finding-item.critical {
+            border-left-color: #e53e3e;
+        }
+
+        .finding-item.high {
+            border-left-color: #ed8936;
+        }
+
+        .finding-item.medium {
+            border-left-color: #ecc94b;
+        }
+
+        .finding-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            justify-content: space-between;
+        }
+
+        .finding-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .finding-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .finding-badge.critical {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .finding-badge.high {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .finding-badge.medium {
+            background: #fefcbf;
+            color: #975a16;
+        }
+
+        .finding-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2d3748;
+            flex: 1;
+        }
+
+        .expand-icon {
+            font-size: 0.8em;
+            color: #a0aec0;
+            transition: transform 0.3s ease;
+        }
+
+        .finding-item.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .finding-description {
+            color: #4a5568;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        /* Expandable Details Panel */
+        .finding-details-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, margin-top 0.4s ease;
+        }
+
+        .finding-details-panel.expanded {
+            max-height: 600px;
+            margin-top: 15px;
+        }
+
+        .details-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #4299e1;
+        }
+
+        .detail-label {
+            font-size: 0.75em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .detail-value {
+            font-size: 0.95em;
+            color: #2d3748;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .detail-value.code {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+
+        .remediation-section {
+            background: #fff5f5;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f56565;
+            margin-top: 15px;
+        }
+
+        .remediation-title {
+            font-weight: 600;
+            color: #c53030;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remediation-steps {
+            color: #742a2a;
+            line-height: 1.6;
+        }
+
+        .remediation-steps ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .remediation-steps li {
+            margin-bottom: 8px;
+        }
+
+        .impact-section {
+            background: #fffaf0;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ed8936;
+            margin-top: 15px;
+        }
+
+        .impact-title {
+            font-weight: 600;
+            color: #c05621;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .impact-text {
+            color: #7c2d12;
+            line-height: 1.6;
+        }
+
+        .finding-meta {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.85em;
+            color: #718096;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .no-findings {
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .no-findings-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .no-findings h3 {
+            font-size: 1.5em;
+            color: #38a169;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .no-findings p {
+            color: #718096;
+            font-size: 1.05em;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .finding-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader"></div>
+        <p class="loading-text">Analyzing CloudTrail logs for threats...</p>
+    </div>
+
+    <header>
+        <div class="header-content">
+            <div class="header-left">
+                <h1>🛡️ S3 Threat Detection Dashboard</h1>
+                <p class="subtitle">Real-time CloudTrail-based threat monitoring</p>
+                
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <a href="/" class="nav-tab">Security Audit</a>
+                    <a href="/threats" class="nav-tab active">Threat Detection</a>
+                </div>
+            </div>
+            <div class="header-actions">
+                <!-- Demo Mode Badge -->
+                <div class="demo-badge hidden" id="demoBadge">
+                    <span>🎭</span>
+                    <span>DEMO MODE</span>
+                </div>
+                
+                <div class="last-updated">
+                    <span>🕐</span>
+                    <span id="lastUpdated">Just now</span>
+                </div>
+                <button class="refresh-btn" id="refreshBtn" onclick="refreshThreats()">
+                    <span class="refresh-icon">🔄</span>
+                    <span class="btn-text">Refresh Scan</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Controls Section -->
+        <div class="controls">
+            <label>Time Period:</label>
+            <select id="timePeriod">
+                <option value="1">Last 1 Hour</option>
+                <option value="6">Last 6 Hours</option>
+                <option value="24" selected>Last 24 Hours</option>
+                <option value="72">Last 3 Days</option>
+                <option value="168">Last 7 Days</option>
+            </select>
+            
+            <label>Demo Scenario:</label>
+            <select id="demoScenario">
+                <option value="mixed" selected>Mixed Threats (Realistic)</option>
+                <option value="clean">Clean Environment</option>
+                <option value="critical">Critical Threats</option>
+                <option value="mass_deletion">Mass Deletion Attack</option>
+                <option value="policy_change">Policy Changes</option>
+                <option value="data_exfil">Data Exfiltration</option>
+                <option value="real">Real CloudTrail Data</option>
+            </select>
+            
+            <button class="btn btn-primary" onclick="loadThreats()">
+                <span>🔍</span>
+                <span>Scan for Threats</span>
+            </button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card critical">
+                <div class="stat-label">Critical Threats</div>
+                <div class="stat-value" id="criticalCount">0</div>
+                <div class="stat-description">Immediate action required</div>
+            </div>
+
+            <div class="stat-card high">
+                <div class="stat-label">High Priority</div>
+                <div class="stat-value" id="highCount">0</div>
+                <div class="stat-description">Requires attention</div>
+            </div>
+
+            <div class="stat-card medium">
+                <div class="stat-label">Medium Priority</div>
+                <div class="stat-value" id="mediumCount">0</div>
+                <div class="stat-description">Monitor closely</div>
+            </div>
+
+            <div class="stat-card info">
+                <div class="stat-label">Total Events</div>
+                <div class="stat-value" id="totalEvents">0</div>
+                <div class="stat-description">CloudTrail events analyzed</div>
+            </div>
+        </div>
+
+        <!-- Critical Threats Section -->
+        <div id="criticalSection" class="section hidden">
+            <div class="section-header">
+                <div class="section-icon critical">🚨</div>
+                <h2 class="section-title">Critical Threats</h2>
+            </div>
+            <div id="criticalFindings"></div>
+        </div>
+
+        <!-- High Priority Threats Section -->
+        <div id="highSection" class="section hidden">
+            <div class="section-header">
+                <div class="section-icon high">⚠️</div>
+                <h2 class="section-title">High Priority Threats</h2>
+            </div>
+            <div id="highFindings"></div>
+        </div>
+
+        <!-- Medium Priority Threats Section -->
+        <div id="mediumSection" class="section hidden">
+            <div class="section-header">
+                <div class="section-icon medium">⚡</div>
+                <h2 class="section-title">Medium Priority Threats</h2>
+            </div>
+            <div id="mediumFindings"></div>
+        </div>
+
+        <!-- No Findings Section -->
+        <div id="noFindings" class="section hidden">
+            <div class="no-findings">
+                <div class="no-findings-icon">✅</div>
+                <h3>No Threats Detected</h3>
+                <p>Your S3 buckets show no suspicious activity in the selected time period.</p>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>AWS S3 Threat Detection • CloudTrail Analysis Dashboard</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentFindings = null;
+        let lastUpdateTime = new Date();
+
+        // Update relative time
+        function updateRelativeTime() {
+            const now = new Date();
+            const diff = Math.floor((now - lastUpdateTime) / 1000);
+            
+            let text;
+            if (diff < 60) text = 'Just now';
+            else if (diff < 3600) text = `${Math.floor(diff / 60)}m ago`;
+            else if (diff < 86400) text = `${Math.floor(diff / 3600)}h ago`;
+            else text = `${Math.floor(diff / 86400)}d ago`;
+            
+            document.getElementById('lastUpdated').textContent = text;
+        }
+
+        async function loadThreats() {
+            const hours = document.getElementById('timePeriod').value;
+            const scenario = document.getElementById('demoScenario').value;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const demoBadge = document.getElementById('demoBadge');
+            
+            loadingOverlay.classList.add('active');
+
+            try {
+                // Build URL with demo parameter if not "real"
+                let url = `/api/threats?hours=${hours}`;
+                if (scenario !== 'real') {
+                    url += `&demo=${scenario}`;
+                }
+                
+                console.log('🔍 Fetching threats from:', url);
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    currentFindings = result.data;
+                    displayFindings(result.data);
+                    lastUpdateTime = new Date();
+                    updateRelativeTime();
+                    
+                    // Show/hide demo badge
+                    if (result.demo_mode) {
+                        demoBadge.classList.remove('hidden');
+                        console.log('🎭 Demo mode active:', scenario);
+                    } else {
+                        demoBadge.classList.add('hidden');
+                        console.log('📡 Real CloudTrail data');
+                    }
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error loading threats:', error);
+                alert('Failed to load threat data: ' + error.message);
+            } finally {
+                loadingOverlay.classList.remove('active');
+            }
+        }
+
+        async function refreshThreats() {
+            const hours = document.getElementById('timePeriod').value;
+            const scenario = document.getElementById('demoScenario').value;
+            const refreshBtn = document.getElementById('refreshBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const demoBadge = document.getElementById('demoBadge');
+            const btnText = refreshBtn.querySelector('.btn-text');
+            const originalText = btnText.textContent;
+            
+            refreshBtn.classList.add('loading');
+            loadingOverlay.classList.add('active');
+            btnText.textContent = 'Scanning';
+
+            try {
+                let url = `/api/threats/refresh?hours=${hours}`;
+                if (scenario !== 'real') {
+                    url += `&demo=${scenario}`;
+                }
+                
+                const response = await fetch(url);
+                const result = await response.json();
+
+                if (result.success) {
+                    currentFindings = result.data;
+                    displayFindings(result.data);
+                    lastUpdateTime = new Date();
+                    updateRelativeTime();
+                    
+                    // Show/hide demo badge
+                    if (result.demo_mode) {
+                        demoBadge.classList.remove('hidden');
+                    } else {
+                        demoBadge.classList.add('hidden');
+                    }
+                    
+                    btnText.textContent = '✓ Updated';
+                    setTimeout(() => {
+                        btnText.textContent = originalText;
+                    }, 2000);
+                } else {
+                    alert('Error: ' + result.error);
+                    btnText.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Error refreshing threats:', error);
+                alert('Failed to refresh threat data: ' + error.message);
+                btnText.textContent = originalText;
+            } finally {
+                refreshBtn.classList.remove('loading');
+                loadingOverlay.classList.remove('active');
+            }
+        }
+
+        function toggleFindingDetails(findingId) {
+            const findingItem = document.getElementById(`finding-${findingId}`);
+            const detailsPanel = document.getElementById(`details-${findingId}`);
+            
+            // Toggle expanded state
+            const isExpanded = findingItem.classList.contains('expanded');
+            
+            // Collapse all other findings
+            document.querySelectorAll('.finding-item.expanded').forEach(item => {
+                if (item.id !== `finding-${findingId}`) {
+                    item.classList.remove('expanded');
+                }
+            });
+            document.querySelectorAll('.finding-details-panel.expanded').forEach(panel => {
+                if (panel.id !== `details-${findingId}`) {
+                    panel.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle this finding
+            if (isExpanded) {
+                findingItem.classList.remove('expanded');
+                detailsPanel.classList.remove('expanded');
+            } else {
+                findingItem.classList.add('expanded');
+                detailsPanel.classList.add('expanded');
+            }
+        }
+
+        function displayFindings(data) {
+            console.log('📊 Displaying findings:', data);
+            
+            // Animate summary cards
+            animateValue('criticalCount', data.summary.critical_findings || 0);
+            animateValue('highCount', data.summary.high_findings || 0);
+            animateValue('mediumCount', data.summary.medium_findings || 0);
+            animateValue('totalEvents', data.summary.total_events || 0);
+
+            // Display findings
+            displayFindingsList('critical', data.critical);
+            displayFindingsList('high', data.high);
+            displayFindingsList('medium', data.medium);
+
+            // Show "no findings" message if nothing found
+            const hasFindings = data.critical.length > 0 || data.high.length > 0 || data.medium.length > 0;
+            document.getElementById('noFindings').classList.toggle('hidden', hasFindings);
+        }
+
+        function displayFindingsList(severity, findings) {
+            const section = document.getElementById(`${severity}Section`);
+            const container = document.getElementById(`${severity}Findings`);
+            
+            if (findings.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            container.innerHTML = '';
+
+            findings.forEach((finding, index) => {
+                const findingId = `${severity}-${index}`;
+                const item = document.createElement('div');
+                item.className = `finding-item ${severity}`;
+                item.id = `finding-${findingId}`;
+                item.onclick = () => toggleFindingDetails(findingId);
+                
+                const typeText = finding.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                // Build quick meta summary
+                let metaHtml = '';
+                if (finding.user) {
+                    metaHtml += `<div class="meta-item"><span>👤</span><span>${finding.user}</span></div>`;
+                }
+                if (finding.source_ip) {
+                    metaHtml += `<div class="meta-item"><span>🌐</span><span>${finding.source_ip}</span></div>`;
+                }
+                if (finding.bucket) {
+                    metaHtml += `<div class="meta-item"><span>🪣</span><span>${finding.bucket}</span></div>`;
+                }
+                if (finding.time) {
+                    metaHtml += `<div class="meta-item"><span>🕐</span><span>${finding.time}</span></div>`;
+                }
+
+                // Build expandable details
+                let detailsContent = buildDetailsContent(finding, severity);
+
+                item.innerHTML = `
+                    <div class="finding-header">
+                        <div class="finding-header-left">
+                            <span class="finding-badge ${severity}">${severity}</span>
+                            <span class="finding-title">${typeText}</span>
+                        </div>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="finding-description">${finding.description}</div>
+                    ${metaHtml ? `<div class="finding-meta">${metaHtml}</div>` : ''}
+                    
+                    <div class="finding-details-panel" id="details-${findingId}">
+                        ${detailsContent}
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        function buildDetailsContent(finding, severity) {
+            let html = '<div class="details-section">';
+            
+            // Details Grid
+            html += '<div class="details-grid">';
+            
+            if (finding.type) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Threat Type</div>
+                        <div class="detail-value">${finding.type.replace(/_/g, ' ')}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.event) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">API Event</div>
+                        <div class="detail-value code">${finding.event}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.bucket) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Target Bucket</div>
+                        <div class="detail-value code">${finding.bucket}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.user) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">User/Principal</div>
+                        <div class="detail-value code">${finding.user}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.source_ip) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Source IP Address</div>
+                        <div class="detail-value code">${finding.source_ip}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.time) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Timestamp</div>
+                        <div class="detail-value">${finding.time}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.user_agent) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">User Agent</div>
+                        <div class="detail-value code">${finding.user_agent}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.success !== undefined) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Operation Status</div>
+                        <div class="detail-value">${finding.success ? '✅ Successful' : '❌ Failed'}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.deletion_count) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Objects Deleted</div>
+                        <div class="detail-value">${finding.deletion_count}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.access_count) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Access Attempts</div>
+                        <div class="detail-value">${finding.access_count}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.time_period) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Time Period</div>
+                        <div class="detail-value">${finding.time_period}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.high_risk_actions) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">High-Risk Actions</div>
+                        <div class="detail-value">${finding.high_risk_actions}</div>
+                    </div>
+                `;
+            }
+            
+            if (finding.total_actions) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">Total Actions</div>
+                        <div class="detail-value">${finding.total_actions}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>'; // End details-grid
+            
+            // Impact Assessment
+            html += buildImpactSection(finding, severity);
+            
+            // Remediation Steps
+            html += buildRemediationSection(finding);
+            
+            html += '</div>'; // End details-section
+            return html;
+        }
+
+        function buildImpactSection(finding, severity) {
+            const impacts = {
+                'high_risk_api_call': 'This API call can modify critical bucket configurations, potentially exposing data or disabling security controls. Unauthorized changes could lead to data breaches or compliance violations.',
+                'mass_deletion': 'Mass deletion events indicate potential ransomware activity or malicious data destruction. This could result in significant data loss and business disruption if not addressed immediately.',
+                'elevated_deletion': 'Elevated deletion activity may indicate data cleanup operations or early signs of malicious activity. Monitor closely for escalation patterns.',
+                'unusual_access_pattern': 'High-volume access from a single source may indicate automated data exfiltration, reconnaissance, or abuse of credentials. This could lead to unauthorized data exposure.',
+                'suspicious_user_activity': 'Multiple high-risk actions from a single user suggest compromised credentials or insider threat. Immediate investigation recommended to prevent further unauthorized changes.'
+            };
+            
+            const impact = impacts[finding.type] || 'This activity deviates from normal patterns and requires investigation to determine if it represents a security threat.';
+            
+            const severityColors = {
+                'critical': '🔴',
+                'high': '🟠',
+                'medium': '🟡'
+            };
+            
+            return `
+                <div class="impact-section">
+                    <div class="impact-title">
+                        ${severityColors[severity]} Impact Assessment
+                    </div>
+                    <div class="impact-text">${impact}</div>
+                </div>
+            `;
+        }
+
+        function buildRemediationSection(finding) {
+            const remediations = {
+                'high_risk_api_call': {
+                    steps: [
+                        'Verify the API call was authorized and expected',
+                        'Review CloudTrail logs for the complete event context',
+                        'Check if MFA was used for authentication',
+                        'Investigate the source IP address and user agent',
+                        'Revert unauthorized changes immediately',
+                        'Review and update IAM policies to prevent unauthorized access',
+                        'Enable CloudWatch alarms for similar activities'
+                    ]
+                },
+                'mass_deletion': {
+                    steps: [
+                        'IMMEDIATELY disable the user/role credentials used',
+                        'Check if bucket versioning is enabled to recover deleted objects',
+                        'Review CloudTrail for all deletion events and affected objects',
+                        'Investigate the source IP and user agent for signs of compromise',
+                        'Restore deleted objects from versioning or backups if available',
+                        'Enable MFA Delete on all critical buckets',
+                        'Implement S3 Object Lock for compliance-critical data',
+                        'Contact AWS Support if ransomware is suspected'
+                    ]
+                },
+                'elevated_deletion': {
+                    steps: [
+                        'Verify if the deletions are part of authorized operations',
+                        'Check if the user/role has legitimate reasons for these deletions',
+                        'Review CloudTrail logs for the complete activity timeline',
+                        'Enable versioning if not already enabled',
+                        'Set up CloudWatch alarms to detect mass deletion patterns',
+                        'Consider implementing lifecycle policies instead of manual deletions'
+                    ]
+                },
+                'unusual_access_pattern': {
+                    steps: [
+                        'Investigate the source IP address (check if it\'s from known locations)',
+                        'Review the accessed objects for sensitivity',
+                        'Check if credentials may be compromised',
+                        'Enable S3 Access Analyzer to identify unintended access',
+                        'Implement rate limiting or WAF rules if applicable',
+                        'Enable S3 Access Logging for forensic analysis',
+                        'Rotate credentials if compromise is suspected'
+                    ]
+                },
+                'suspicious_user_activity': {
+                    steps: [
+                        'Immediately investigate if user credentials are compromised',
+                        'Review all recent actions by this user in CloudTrail',
+                        'Temporarily disable the user/role if unauthorized',
+                        'Check for privilege escalation attempts',
+                        'Enable MFA for all privileged accounts',
+                        'Review IAM policies for least privilege violations',
+                        'Set up anomaly detection with AWS GuardDuty'
+                    ]
+                }
+            };
+            
+            const remediation = remediations[finding.type] || {
+                steps: [
+                    'Review CloudTrail logs for complete event details',
+                    'Verify the activity was authorized',
+                    'Investigate source IP and user credentials',
+                    'Check for similar suspicious patterns',
+                    'Update security controls to prevent recurrence'
+                ]
+            };
+            
+            let html = `
+                <div class="remediation-section">
+                    <div class="remediation-title">
+                        🔧 Recommended Actions
+                    </div>
+                    <div class="remediation-steps">
+                        <ol>
+            `;
+            
+            remediation.steps.forEach(step => {
+                html += `<li>${step}</li>`;
+            });
+            
+            html += `
+                        </ol>
+                    </div>
+                </div>
+            `;
+            
+            return html;
+        }
+
+        function animateValue(id, end) {
+            const element = document.getElementById(id);
+            const start = parseInt(element.textContent) || 0;
+            const duration = 1000;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const value = Math.floor(start + (end - start) * easeOutQuad(progress));
+                element.textContent = value;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        function easeOutQuad(t) {
+            return t * (2 - t);
+        }
+
+        // Auto-load on page load with demo mode
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Page loaded, loading threats...');
+            loadThreats();
+        });
+
+        // Update relative time every minute
+        setInterval(updateRelativeTime, 60000);
+    </script>
+</body>
+</html>

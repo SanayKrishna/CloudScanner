@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Security Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+            color: #2d3748;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Sticky Header */
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 30px 0;
+            margin: 0 -20px 50px -20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            animation: slideDown 0.6s ease;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #1a202c;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 0.95em;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+        }
+
+        .nav-tab:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .nav-tab.inactive {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .nav-tab.inactive:hover {
+            background: #cbd5e0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Threat Alert Badge */
+        .threat-alert {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .threat-alert:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(229, 62, 62, 0.4);
+        }
+
+        .threat-alert.safe {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+        }
+
+        .threat-alert.warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.3);
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            font-size: 0.95em;
+        }
+
+        .refresh-btn:hover:not(.loading) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-btn:active:not(.loading) {
+            transform: translateY(0);
+        }
+
+        .refresh-btn.loading {
+            opacity: 0.8;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .refresh-icon {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            font-size: 1.1em;
+        }
+
+        .refresh-btn.loading .refresh-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        .refresh-btn.loading .btn-text::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .last-updated {
+            font-size: 0.85em;
+            color: #718096;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 10px 18px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .filter-btn:hover {
+            border-color: #cbd5e0;
+            background: #f7fafc;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+            animation: fadeInUp 0.6s ease 0.2s both;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 4px solid;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-card.critical {
+            border-left-color: #e53e3e;
+        }
+
+        .stat-card.warning {
+            border-left-color: #ed8936;
+        }
+
+        .stat-card.info {
+            border-left-color: #4299e1;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card.critical .stat-value {
+            color: #e53e3e;
+        }
+
+        .stat-card.warning .stat-value {
+            color: #ed8936;
+        }
+
+        .stat-card.info .stat-value {
+            color: #4299e1;
+        }
+
+        .stat-description {
+            font-size: 0.85em;
+            color: #a0aec0;
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+            animation: fadeInUp 0.6s ease 0.4s both;
+            transition: all 0.3s ease;
+        }
+
+        .section.hidden {
+            display: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 1.2em;
+        }
+
+        .section-icon.critical {
+            background: #fed7d7;
+            color: #e53e3e;
+        }
+
+        .section-icon.warning {
+            background: #feebc8;
+            color: #ed8936;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .bucket-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .bucket-item {
+            background: #f7fafc;
+            padding: 14px 18px;
+            border-radius: 10px;
+            border-left: 3px solid;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            opacity: 1;
+            animation: slideInLeft 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .bucket-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .bucket-item.expanded {
+            background: #e6fffa;
+        }
+
+        .bucket-item.critical {
+            border-left-color: #e53e3e;
+        }
+
+        .bucket-item.warning {
+            border-left-color: #ed8936;
+        }
+
+        .bucket-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .bucket-name {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #2d3748;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .bucket-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .expand-icon {
+            font-size: 0.8em;
+            color: #a0aec0;
+            transition: transform 0.3s ease;
+        }
+
+        .bucket-item.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .bucket-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bucket-badge.critical {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .bucket-badge.warning {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        /* Bucket Details Panel */
+        .bucket-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+            background: white;
+            margin-top: 0;
+            border-radius: 0 0 10px 10px;
+        }
+
+        .bucket-details.expanded {
+            max-height: 800px;
+            padding: 20px;
+            margin-top: 10px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .details-loading {
+            text-align: center;
+            padding: 30px;
+            color: #a0aec0;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-card {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #4299e1;
+        }
+
+        .detail-label {
+            font-size: 0.75em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .detail-value {
+            font-size: 0.95em;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .detail-value.enabled {
+            color: #38a169;
+        }
+
+        .detail-value.disabled {
+            color: #e53e3e;
+        }
+
+        .objects-section {
+            margin-top: 20px;
+        }
+
+        .objects-header {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .objects-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .object-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 100px;
+            gap: 15px;
+            align-items: center;
+            transition: background 0.2s ease;
+        }
+
+        .object-item:last-child {
+            border-bottom: none;
+        }
+
+        .object-item:hover {
+            background: #f7fafc;
+        }
+
+        .object-key {
+            font-family: 'Monaco', monospace;
+            font-size: 0.85em;
+            color: #2d3748;
+            word-break: break-all;
+        }
+
+        .object-size {
+            font-size: 0.85em;
+            color: #718096;
+        }
+
+        .object-date {
+            font-size: 0.8em;
+            color: #a0aec0;
+        }
+
+        .object-status {
+            display: flex;
+            gap: 5px;
+        }
+
+        .status-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+        }
+
+        .status-badge.public {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .status-badge.encrypted {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .status-badge.not-encrypted {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .no-objects {
+            padding: 30px;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        /* Public Access Block Status */
+        .access-block-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .access-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            color: #4a5568;
+        }
+
+        .access-icon {
+            font-size: 1em;
+        }
+
+        .access-icon.enabled {
+            color: #38a169;
+        }
+
+        .access-icon.disabled {
+            color: #e53e3e;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #a0aec0;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+
+            .filter-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+
+            .filter-buttons {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .threat-alert {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader"></div>
+    </div>
+
+    <header>
+        <div class="header-content">
+            <div class="header-left">
+                <h1>🛡️ S3 Security Dashboard</h1>
+                <p class="subtitle">Real-time monitoring of bucket configurations</p>
+                
+                <!-- Navigation Tabs -->
+                <div class="nav-tabs">
+                    <a href="/" class="nav-tab">Security Audit</a>
+                    <a href="/threats" class="nav-tab inactive">Threat Detection</a>
+                </div>
+            </div>
+            <div class="header-actions">
+                <!-- Threat Alert Badge -->
+                <a href="/threats" class="threat-alert" id="threatBadge">
+                    <span>🚨</span>
+                    <span id="activeThreatCount">0</span>
+                    <span>Active Threats</span>
+                </a>
+
+                <div class="last-updated">
+                    <span>🕐</span>
+                    <span id="lastUpdated">Loading...</span>
+                </div>
+                <button class="refresh-btn" id="refreshBtn">
+                    <span class="refresh-icon">🔄</span>
+                    <span class="btn-text">Refresh Scan</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Search bucket names...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="public">Public</button>
+                <button class="filter-btn" data-filter="versioning">No Versioning</button>
+                <button class="filter-btn" data-filter="unencrypted">Unencrypted</button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card critical" data-filter="public">
+                <div class="stat-label">Critical Issues</div>
+                <div class="stat-value" id="publicCount">0</div>
+                <div class="stat-description">Public buckets detected</div>
+            </div>
+
+            <div class="stat-card warning" data-filter="versioning">
+                <div class="stat-label">Warnings</div>
+                <div class="stat-value" id="versioningCount">0</div>
+                <div class="stat-description">Versioning disabled</div>
+            </div>
+
+            <div class="stat-card info" data-filter="unencrypted">
+                <div class="stat-label">Unencrypted Buckets</div>
+                <div class="stat-value" id="unencryptedCount">0</div>
+                <div class="stat-description">No encryption applied</div>
+            </div>
+
+            <div class="stat-card info" data-filter="all">
+                <div class="stat-label">Total Buckets</div>
+                <div class="stat-value" id="totalBuckets">0</div>
+                <div class="stat-description">Buckets analyzed</div>
+            </div>
+        </div>
+
+        <!-- Public Buckets Section -->
+        <div class="section" id="publicSection">
+            <div class="section-header">
+                <div class="section-icon critical">⚠️</div>
+                <h2 class="section-title">Public Buckets</h2>
+            </div>
+            <div class="bucket-list" id="publicBuckets"></div>
+        </div>
+
+        <!-- Versioning Disabled Section -->
+        <div class="section" id="versioningSection">
+            <div class="section-header">
+                <div class="section-icon warning">📦</div>
+                <h2 class="section-title">Versioning Disabled</h2>
+            </div>
+            <div class="bucket-list" id="versioningBuckets"></div>
+        </div>
+
+        <!-- Unencrypted Buckets Section -->
+        <div class="section" id="unencryptedSection">
+            <div class="section-header">
+                <div class="section-icon warning">🔓</div>
+                <h2 class="section-title">Unencrypted Buckets</h2>
+            </div>
+            <div class="bucket-list" id="unencryptedBuckets"></div>
+        </div>
+
+        <footer class="footer">
+            <p>AWS S3 Security Audit • Interactive Dashboard</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentFilter = 'all';
+        let allData = {};
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setupEventListeners();
+            updateThreatBadge(); // Load threat count
+        });
+
+        function setupEventListeners() {
+            // Refresh button
+            document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    currentFilter = e.target.dataset.filter;
+                    applyFilters();
+                });
+            });
+
+            // Stat cards filter
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const filter = card.dataset.filter;
+                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.filter === filter);
+                    });
+                    currentFilter = filter;
+                    applyFilters();
+                });
+            });
+
+            // Search input
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+        }
+
+        async function loadData() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const btnText = refreshBtn.querySelector('.btn-text');
+            const originalText = btnText.textContent;
+            
+            refreshBtn.classList.add('loading');
+            loadingOverlay.classList.add('active');
+            btnText.textContent = 'Scanning';
+
+            try {
+                console.log('🔄 Starting S3 scan...');
+                const startTime = Date.now();
+                
+                const response = await fetch('/scan');
+                const result = await response.json();
+
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                console.log(`✅ Scan completed in ${elapsed}s`);
+
+                if (result.success) {
+                    allData = result.data;
+                    updateDashboard(allData);
+                    document.getElementById('lastUpdated').textContent = allData.generated_time;
+                    
+                    // Show success feedback
+                    btnText.textContent = '✓ Updated';
+                    setTimeout(() => {
+                        btnText.textContent = originalText;
+                    }, 2000);
+
+                    // Update threat badge after scan
+                    updateThreatBadge();
+                } else {
+                    console.error('❌ Error loading data:', result.error);
+                    alert('Failed to load data: ' + result.error);
+                    btnText.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert('Failed to connect to server. Make sure the server is running.');
+                btnText.textContent = originalText;
+            } finally {
+                refreshBtn.classList.remove('loading');
+                loadingOverlay.classList.remove('active');
+            }
+        }
+
+        // Update threat badge
+// Update threat badge - Use demo data for CloudTrail threats
+async function updateThreatBadge() {
+    try {
+        // Use demo=mixed to show mock threat data
+        const response = await fetch('/api/threats/summary?demo=mixed');
+        const result = await response.json();
+        
+        if (result.success) {
+            const totalThreats = result.data.critical_count + result.data.high_count;
+            document.getElementById('activeThreatCount').textContent = totalThreats;
+            
+            const badge = document.getElementById('threatBadge');
+            badge.classList.remove('safe', 'warning');
+            
+            if (totalThreats === 0) {
+                badge.classList.add('safe');
+                badge.querySelector('span:first-child').textContent = '✅';
+            } else if (result.data.critical_count > 0) {
+                badge.querySelector('span:first-child').textContent = '🚨';
+            } else {
+                badge.classList.add('warning');
+                badge.querySelector('span:first-child').textContent = '⚠️';
+            }
+        }
+    } catch (error) {
+        console.log('Threat detection not available');
+        // Fallback: Show 0 threats
+        document.getElementById('activeThreatCount').textContent = '0';
+    }
+}
+        function updateDashboard(data) {
+            // Update stats
+            animateValue('publicCount', data.public_count);
+            animateValue('versioningCount', data.versioning_count);
+            animateValue('unencryptedCount', data.unencrypted_count);
+            animateValue('totalBuckets', data.total_buckets);
+
+            // Update bucket lists
+            renderBuckets('publicBuckets', data.public_buckets, 'critical', 'Public');
+            renderBuckets('versioningBuckets', data.versioning_disabled, 'warning', 'No Version');
+            renderBuckets('unencryptedBuckets', data.unencrypted_buckets, 'warning', 'Unencrypted');
+
+            applyFilters();
+        }
+
+        function renderBuckets(containerId, buckets, type, badge) {
+            const container = document.getElementById(containerId);
+            
+            if (buckets.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <p>No issues found. Great job!</p>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = buckets.map(bucket => `
+                    <div class="bucket-wrapper">
+                        <div class="bucket-item ${type}" data-bucket="${bucket}" onclick="toggleBucketDetails('${bucket}', this)">
+                            <div class="bucket-header">
+                                <span class="bucket-name">${bucket}</span>
+                                <div class="bucket-actions">
+                                    <span class="bucket-badge ${type}">${badge}</span>
+                                    <span class="expand-icon">▼</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bucket-details" id="details-${bucket.replace(/[^a-zA-Z0-9]/g, '_')}"></div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function toggleBucketDetails(bucketName, element) {
+            const bucketItem = element;
+            const detailsId = 'details-' + bucketName.replace(/[^a-zA-Z0-9]/g, '_');
+            const detailsPanel = document.getElementById(detailsId);
+            
+            // If already expanded, collapse it
+            if (bucketItem.classList.contains('expanded')) {
+                bucketItem.classList.remove('expanded');
+                detailsPanel.classList.remove('expanded');
+                return;
+            }
+
+            // Collapse all other buckets
+            document.querySelectorAll('.bucket-item.expanded').forEach(item => {
+                item.classList.remove('expanded');
+            });
+            document.querySelectorAll('.bucket-details.expanded').forEach(panel => {
+                panel.classList.remove('expanded');
+            });
+
+            // Expand this bucket
+            bucketItem.classList.add('expanded');
+            detailsPanel.classList.add('expanded');
+
+            // Show loading state
+            detailsPanel.innerHTML = `
+                <div class="details-loading">
+                    <div class="loader" style="width: 30px; height: 30px; margin: 0 auto 10px;"></div>
+                    <p>Loading bucket details...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`/bucket-details/${encodeURIComponent(bucketName)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    renderBucketDetails(detailsPanel, result.data);
+                } else {
+                    detailsPanel.innerHTML = `
+                        <div class="details-loading">
+                            <p style="color: #e53e3e;">❌ Error loading details: ${result.error}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error fetching bucket details:', error);
+                detailsPanel.innerHTML = `
+                    <div class="details-loading">
+                        <p style="color: #e53e3e;">❌ Failed to load details</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderBucketDetails(container, data) {
+            const formatSize = (bytes) => {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+            };
+
+            const versioningClass = data.versioning_status === 'Enabled' ? 'enabled' : 'disabled';
+            const encryptionClass = data.encryption_status !== 'None' ? 'enabled' : 'disabled';
+
+            let html = `
+                <div class="details-grid">
+                    <div class="detail-card">
+                        <div class="detail-label">Versioning</div>
+                        <div class="detail-value ${versioningClass}">${data.versioning_status}</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-label">Encryption</div>
+                        <div class="detail-value ${encryptionClass}">${data.encryption_status}</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-label">Total Objects</div>
+                        <div class="detail-value">${data.total_objects}${data.has_more ? '+' : ''}</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-label">Total Size</div>
+                        <div class="detail-value">${formatSize(data.total_size)}</div>
+                    </div>
+                </div>
+
+                <div class="detail-card" style="margin-bottom: 20px;">
+                    <div class="detail-label">Public Access Block Configuration</div>
+                    <div class="access-block-grid">
+                        <div class="access-item">
+                            <span class="access-icon ${data.public_access_block.block_public_acls ? 'enabled' : 'disabled'}">
+                                ${data.public_access_block.block_public_acls ? '✅' : '❌'}
+                            </span>
+                            <span>Block Public ACLs</span>
+                        </div>
+                        <div class="access-item">
+                            <span class="access-icon ${data.public_access_block.ignore_public_acls ? 'enabled' : 'disabled'}">
+                                ${data.public_access_block.ignore_public_acls ? '✅' : '❌'}
+                            </span>
+                            <span>Ignore Public ACLs</span>
+                        </div>
+                        <div class="access-item">
+                            <span class="access-icon ${data.public_access_block.block_public_policy ? 'enabled' : 'disabled'}">
+                                ${data.public_access_block.block_public_policy ? '✅' : '❌'}
+                            </span>
+                            <span>Block Public Policy</span>
+                        </div>
+                        <div class="access-item">
+                            <span class="access-icon ${data.public_access_block.restrict_public_buckets ? 'enabled' : 'disabled'}">
+                                ${data.public_access_block.restrict_public_buckets ? '✅' : '❌'}
+                            </span>
+                            <span>Restrict Public Buckets</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (data.objects.length > 0) {
+                html += `
+                    <div class="objects-section">
+                        <div class="objects-header">
+                            📄 Objects (showing first ${data.objects.length})
+                        </div>
+                        <div class="objects-list">
+                            ${data.objects.map(obj => `
+                                <div class="object-item">
+                                    <div class="object-key">${obj.key}</div>
+                                    <div class="object-size">${formatSize(obj.size)}</div>
+                                    <div class="object-date">${obj.last_modified}</div>
+                                    <div class="object-status">
+                                        ${obj.is_public ? '<span class="status-badge public">Public</span>' : ''}
+                                        ${obj.encryption !== 'None' ? 
+                                            `<span class="status-badge encrypted">${obj.encryption}</span>` : 
+                                            '<span class="status-badge not-encrypted">No Encryption</span>'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${data.has_more ? '<p style="margin-top: 10px; color: #718096; font-size: 0.85em; text-align: center;">More objects available (showing first 100)</p>' : ''}
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="no-objects">
+                        <p>📭 This bucket is empty</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            // Show/hide sections based on filter
+            document.getElementById('publicSection').classList.toggle('hidden', 
+                currentFilter !== 'all' && currentFilter !== 'public');
+            document.getElementById('versioningSection').classList.toggle('hidden', 
+                currentFilter !== 'all' && currentFilter !== 'versioning');
+            document.getElementById('unencryptedSection').classList.toggle('hidden', 
+                currentFilter !== 'all' && currentFilter !== 'unencrypted');
+
+            // Filter buckets by search
+            document.querySelectorAll('.bucket-item').forEach(item => {
+                const bucketName = item.dataset.bucket.toLowerCase();
+                item.style.display = bucketName.includes(searchTerm) ? 'flex' : 'none';
+            });
+        }
+
+        function animateValue(id, end) {
+            const element = document.getElementById(id);
+            const start = parseInt(element.textContent) || 0;
+            const duration = 1000;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const value = Math.floor(start + (end - start) * easeOutQuad(progress));
+                element.textContent = value;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        function easeOutQuad(t) {
+            return t * (2 - t);
+        }
+
+        // Auto-update threat badge every 5 minutes
+        setInterval(updateThreatBadge, 300000);
+    </script>
+</body>
+</html>
